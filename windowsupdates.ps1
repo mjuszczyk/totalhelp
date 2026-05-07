@@ -19,7 +19,7 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate)) {
 }
 
 # Define a function to display the menu
-function Display-Menu {
+function Show-Menu {
     param (
         [string]$Title = 'Windows Update Manager'
     )
@@ -35,9 +35,9 @@ function Display-Menu {
 
 # Start the main loop
 do {
-    Display-Menu
-    $input = Read-Host "`nEnter your choice"
-    switch ($input) {
+    Show-Menu
+    $userChoice = Read-Host "`nEnter your choice"
+    switch ($userChoice) {
         '1' {
             Write-Host "`nInitiating check for updates..."
             Get-WindowsUpdate -MicrosoftUpdate
@@ -66,7 +66,7 @@ do {
         '4' {
             Write-Host "`nInitiating installation of selective updates..."
             $updates = Get-WindowsUpdate -MicrosoftUpdate
-            $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i++): $($_.Title)" }
+            $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i): $($_.Title)"; $i++ }
             $indices = Read-Host "`nEnter the numbers of the updates you want to install (separated by commas)"
             $indices = $indices -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[0-9]+$' } | ForEach-Object { [int]$_ }
             $selectedUpdates = $indices | ForEach-Object { if ($_ -ge 0 -and $_ -lt $updates.Count) { $updates[$_] } }
