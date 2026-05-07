@@ -1,0 +1,90 @@
+# Check if running as an administrator
+if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "`nThis script must be run as an Administrator. Please re-run this script as an Administrator!" -ForegroundColor Red
+	Start-Sleep -Seconds 10
+    return
+}
+
+# Import the module
+if (!(Get-Module -ListAvailable -Name PSWindowsUpdate)) {
+    Write-Host "`nPSWindowsUpdate module is not installed." -ForegroundColor Red
+    $userInput = Read-Host "Would you like to install the PSWindowsUpdate module? (Y/N)"
+    if ($userInput -eq "Y") {
+        Write-Host "`nAttempting to install PSWindowsUpdate module..."
+        Install-Module PSWindowsUpdate -Confirm:$false
+        Write-Host "`nPSWindowsUpdate module has been installed successfully." -ForegroundColor Green
+    }
+} else {
+    Write-Host "`nPSWindowsUpdate module is already installed." -ForegroundColor Green
+}
+
+# Define a function to display the menu
+function Display-Menu {
+    param (
+        [string]$Title = 'Windows Update Manager'
+    )
+    Clear-Host
+    Write-Host "`n================ $Title ================" -ForegroundColor Cyan
+    Write-Host "`n1: Check for updates"
+    Write-Host "2: Install all updates"
+    Write-Host "3: Install only Windows updates"
+    Write-Host "4: Install selective updates"
+    Write-Host "5: Exit"
+    Write-Host "`n=========================================" -ForegroundColor Cyan
+}
+
+# Start the main loop
+do {
+    Display-Menu
+    $input = Read-Host "`nEnter your choice"
+    switch ($input) {
+        '1' {
+            Write-Host "`nInitiating check for updates..."
+            Get-WindowsUpdate -MicrosoftUpdate
+            Write-Host "`nCheck for updates completed." -ForegroundColor Green
+        }
+        '2' {
+            Write-Host "`nInitiating installation of all updates..."
+            $reboot = Read-Host "`nDo you want to allow reboot after installing updates? (Y/N)"
+            if ($reboot -eq "Y") {
+                Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
+            } else {
+                Install-WindowsUpdate -MicrosoftUpdate -AcceptAll
+            }
+            Write-Host "`nInstallation of all updates completed." -ForegroundColor Green
+        }
+        '3' {
+            Write-Host "`nInitiating installation of only Windows updates..."
+            $reboot = Read-Host "`nDo you want to allow reboot after installing updates? (Y/N)"
+            if ($reboot -eq "Y") {
+                Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot -NotCategory "Drivers","Firmware"
+            } else {
+                Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -NotCategory "Drivers","Firmware"
+            }
+            Write-Host "`nInstallation of only Windows updates completed." -ForegroundColor Green
+        }
+        '4' {
+            Write-Host "`nInitiating installation of selective updates..."
+            $updates = Get-WindowsUpdate -MicrosoftUpdate
+            $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i++): $($_.Title)" }
+            $indices = Read-Host "`nEnter the numbers of the updates you want to install (separated by commas)"
+            $indices = $indices -split ',' | ForEach-Object { $_.Trim() }
+            $selectedUpdates = $updates[$indices]
+            $reboot = Read-Host "`nDo you want to allow reboot after installing updates? (Y/N)"
+            if ($reboot -eq "Y") {
+                $selectedUpdates | Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
+            } else {
+                $selectedUpdates | Install-WindowsUpdate -MicrosoftUpdate -AcceptAll
+            }
+            Write-Host "`nInstallation of selected updates completed." -ForegroundColor Green
+        }
+        '5' {
+            Write-Host "`nExiting..."
+            break
+        }
+        default {
+            Write-Host "`nInvalid choice. Please try again." -ForegroundColor Red
+        }
+    }
+    Pause
+} while ($true)
