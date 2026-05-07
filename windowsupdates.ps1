@@ -66,7 +66,7 @@ do {
         '4' {
             Write-Host "`nInitiating installation of selective updates..."
             $updates = Get-WindowsUpdate -MicrosoftUpdate
-            $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i): $($_.Title)"; $i++ }
+            $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i): $($_.Title)"; $i++ } -End { }
             $indices = Read-Host "`nEnter the numbers of the updates you want to install (separated by commas)"
             $indices = $indices -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[0-9]+$' } | ForEach-Object { [int]$_ }
             $selectedUpdates = $indices | ForEach-Object { if ($_ -ge 0 -and $_ -lt $updates.Count) { $updates[$_] } }
