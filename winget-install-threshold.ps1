@@ -10,7 +10,8 @@ $apps = @(
     @{ Name = "WireGuard"; Id = "WireGuard.WireGuard" },
     @{ Name = "Adobe Acrobat Reader"; Id = "Adobe.Acrobat.Reader.64-bit" },
     @{ Name = "KeePass"; Id = "DominikReichl.KeePass" },
-    @{ Name = "Google Drive"; Id = "Google.Drive" }
+    @{ Name = "Google Drive"; Id = "Google.Drive" },
+    @{ Name = "Zoom"; Id = "Zoom.Zoom" }
 )
 
 foreach ($app in $apps) {
