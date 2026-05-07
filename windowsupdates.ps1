@@ -11,7 +11,7 @@ if (!(Get-Module -ListAvailable -Name PSWindowsUpdate)) {
     $userInput = Read-Host "Would you like to install the PSWindowsUpdate module? (Y/N)"
     if ($userInput -eq "Y") {
         Write-Host "`nAttempting to install PSWindowsUpdate module..."
-        Install-Module PSWindowsUpdate -Confirm:$false
+        Install-Module PSWindowsUpdate -Confirm:$false -Force -Scope CurrentUser
         Write-Host "`nPSWindowsUpdate module has been installed successfully." -ForegroundColor Green
     }
 } else {
@@ -68,8 +68,12 @@ do {
             $updates = Get-WindowsUpdate -MicrosoftUpdate
             $updates | ForEach-Object -Begin { $i = 0 } -Process { Write-Host "`n$($i++): $($_.Title)" }
             $indices = Read-Host "`nEnter the numbers of the updates you want to install (separated by commas)"
-            $indices = $indices -split ',' | ForEach-Object { $_.Trim() }
-            $selectedUpdates = $updates[$indices]
+            $indices = $indices -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[0-9]+$' } | ForEach-Object { [int]$_ }
+            $selectedUpdates = $indices | ForEach-Object { if ($_ -ge 0 -and $_ -lt $updates.Count) { $updates[$_] } }
+            if (-not $selectedUpdates) {
+                Write-Host "`nNo valid updates selected. Returning to menu." -ForegroundColor Yellow
+                break
+            }
             $reboot = Read-Host "`nDo you want to allow reboot after installing updates? (Y/N)"
             if ($reboot -eq "Y") {
                 $selectedUpdates | Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
@@ -86,5 +90,6 @@ do {
             Write-Host "`nInvalid choice. Please try again." -ForegroundColor Red
         }
     }
-    Pause
+    $pause = Read-Host "`nPress Enter to continue or type 'q' to quit menu pause"
+    if ($pause -eq 'q') { break }
 } while ($true)
