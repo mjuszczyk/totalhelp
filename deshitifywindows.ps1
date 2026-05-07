@@ -40,9 +40,20 @@ $BloatApps = @(
     "Microsoft.ZuneMusic",
     "Microsoft.ZuneVideo"
 )
+
+# Track errors for summary
+$removalErrors = @()
 foreach ($app in $BloatApps) {
-    Get-AppxPackage -Name $app -AllUsers | Remove-AppxPackage -ErrorAction SilentlyContinue
-    Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ $app | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+    try {
+        Get-AppxPackage -Name $app -AllUsers | Remove-AppxPackage -ErrorAction Stop
+    } catch {
+        $removalErrors += "AppxPackage: $app - $($_.Exception.Message)"
+    }
+    try {
+        Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ $app | Remove-AppxProvisionedPackage -Online -ErrorAction Stop
+    } catch {
+        $removalErrors += "ProvisionedPackage: $app - $($_.Exception.Message)"
+    }
 }
 
 # Restore full right-click context menu (Windows 11)
@@ -103,4 +114,10 @@ Write-Host "Restarting Explorer to apply changes..."
 Stop-Process -Name explorer -Force
 Start-Process explorer
 
-Write-Host "Windows has been de-bloated and made more familiar!" -ForegroundColor Green
+
+if ($removalErrors.Count -gt 0) {
+    Write-Host "\nCompleted with some errors during app removal:" -ForegroundColor Yellow
+    $removalErrors | ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
+} else {
+    Write-Host "Windows has been de-bloated and made more familiar!" -ForegroundColor Green
+}
