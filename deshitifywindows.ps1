@@ -119,5 +119,5 @@ if ($removalErrors.Count -gt 0) {
     Write-Host "\nCompleted with some errors during app removal:" -ForegroundColor Yellow
     $removalErrors | ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
 } else {
-    Write-Host "Windows has been de-bloated and made more familiar!" -ForegroundColor Green
+    Write-Host "Windows has been deshitified!" -ForegroundColor Green
 }
