@@ -46,22 +46,40 @@ if (-not $pwsh) {
         throw "winget is not available. Install App Installer from Microsoft Store, then rerun this script."
     }
 
-    winget install `
+    Write-Host "Running: winget install Microsoft.PowerShell --scope machine..."
+    
+    & winget install `
         --id Microsoft.PowerShell `
         --source winget `
         --scope machine `
         --accept-package-agreements `
         --accept-source-agreements
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Winget install returned exit code $LASTEXITCODE. Retrying..."
+        Start-Sleep -Seconds 3
+        & winget install `
+            --id Microsoft.PowerShell `
+            --source winget `
+            --scope machine `
+            --accept-package-agreements `
+            --accept-source-agreements
+    }
 
+    # Refresh PATH to pick up newly installed pwsh
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    
     $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
 }
 
 if (-not $pwsh) {
+    # Check fallback path directly since PATH might not be updated yet
     $fallback = "C:\Program Files\PowerShell\7\pwsh.exe"
     if (Test-Path $fallback) {
+        Write-Host "Found PowerShell 7 at fallback path: $fallback"
         $pwshPath = $fallback
     } else {
-        throw "PowerShell 7 installation completed, but pwsh.exe was not found."
+        throw "PowerShell 7 installation failed or was not found at $fallback"
     }
 } else {
     $pwshPath = $pwsh.Source
