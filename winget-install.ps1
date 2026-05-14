@@ -2,7 +2,7 @@
 # Installs common apps using winget
 # Run as Administrator for best results
 
- $apps = @(
+$apps = @(
     @{ Name = "Mozilla Firefox"; Id = "Mozilla.Firefox" },
     @{ Name = "VLC Media Player"; Id = "VideoLAN.VLC" },
     @{ Name = "7-Zip"; Id = "7zip.7zip" },
@@ -11,7 +11,8 @@
     @{ Name = "KeePass"; Id = "DominikReichl.KeePass" },
     @{ Name = "PuTTY"; Id = "SimonTatham.PuTTY" },
     @{ Name = "WinSCP"; Id = "WinSCP.WinSCP" },
-    @{ Name = "Nextcloud"; Id = "Nextcloud.NextcloudDesktop" }
+    @{ Name = "Nextcloud"; Id = "Nextcloud.NextcloudDesktop" },
+    @{ Name = "GNU nano"; Id = "GNU.nano" }
 )
 
 foreach ($app in $apps) {
