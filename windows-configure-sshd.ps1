@@ -38,37 +38,60 @@ Write-Host "Checking for PowerShell 7..."
 $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
 
 if (-not $pwsh) {
-    Write-Host "PowerShell 7 not found. Installing with winget..."
-
+    $installedWithWinget = $false
     $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
 
-    if (-not $winget) {
-        throw "winget is not available. Install App Installer from Microsoft Store, then rerun this script."
-    }
+    if ($winget) {
+        Write-Host "PowerShell 7 not found. Installing with winget..."
+        Write-Host "Running: winget install Microsoft.PowerShell --scope machine..."
 
-    Write-Host "Running: winget install Microsoft.PowerShell --scope machine..."
-    
-    & winget install `
-        --id Microsoft.PowerShell `
-        --source winget `
-        --scope machine `
-        --accept-package-agreements `
-        --accept-source-agreements
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Winget install returned exit code $LASTEXITCODE. Retrying..."
-        Start-Sleep -Seconds 3
         & winget install `
             --id Microsoft.PowerShell `
             --source winget `
             --scope machine `
             --accept-package-agreements `
             --accept-source-agreements
+
+        if ($LASTEXITCODE -eq 0) {
+            $installedWithWinget = $true
+        } else {
+            Write-Host "Winget install returned exit code $LASTEXITCODE. Falling back to MSI installer..."
+        }
+    } else {
+        Write-Host "winget is not available. Falling back to MSI installer..."
+    }
+
+    if (-not $installedWithWinget) {
+        $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq "Arm64") {
+            "arm64"
+        } elseif ([Environment]::Is64BitOperatingSystem) {
+            "x64"
+        } else {
+            "x86"
+        }
+
+        Write-Host "Downloading latest PowerShell MSI for architecture: $arch"
+
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/PowerShell/PowerShell/releases/latest"
+        $msi = $release.assets | Where-Object { $_.name -match "PowerShell-.*-win-$arch\.msi$" } | Select-Object -First 1
+
+        if (-not $msi) {
+            throw "Could not find a matching PowerShell MSI in latest release assets for architecture $arch."
+        }
+
+        $msiPath = Join-Path $env:TEMP $msi.name
+        Invoke-WebRequest -Uri $msi.browser_download_url -OutFile $msiPath
+
+        $proc = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$msiPath`" /qn /norestart" -Wait -PassThru
+        if ($proc.ExitCode -ne 0) {
+            throw "MSI installation failed with exit code $($proc.ExitCode)."
+        }
+
+        Remove-Item -Path $msiPath -Force -ErrorAction SilentlyContinue
     }
 
     # Refresh PATH to pick up newly installed pwsh
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-    
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
 }
 
