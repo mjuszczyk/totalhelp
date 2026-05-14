@@ -104,9 +104,57 @@ Write-Host "Restarting sshd..."
 
 Restart-Service sshd
 
+Write-Host "Installing authorized public key for tela..."
+
+$sshDir = "C:\ProgramData\ssh"
+$authKeysFile = "$sshDir\administrators_authorized_keys"
+
+if (-not (Test-Path $sshDir)) {
+    New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+    Write-Host "Created SSH directory: $sshDir"
+}
+
+$publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPbkZUMWUTVz7MOa6D8HcrMY9uS0z+Yc3ZP/xq754SkB mjuszczyk@tela"
+
+if (Test-Path $authKeysFile) {
+    $content = Get-Content $authKeysFile -Raw
+    if ($content -notlike "*$publicKey*") {
+        Add-Content -Path $authKeysFile -Value $publicKey
+        Write-Host "Added tela's public key to $authKeysFile"
+    } else {
+        Write-Host "tela's public key already present in $authKeysFile"
+    }
+} else {
+    Set-Content -Path $authKeysFile -Value $publicKey
+    Write-Host "Created $authKeysFile with tela's public key"
+}
+
+# Set proper permissions for SSH to accept the file
+Write-Host "Setting permissions on authorized_keys file..."
+
+# Remove inheritance and set explicit permissions
+$acl = Get-Acl $authKeysFile
+$acl.SetAccessRuleProtection($true, $false)
+$acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) }
+
+# Grant full control to SYSTEM and Administrators
+$systemSid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-18")
+$adminsSid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
+
+$rule1 = New-Object System.Security.AccessControl.FileSystemAccessRule($systemSid, "FullControl", "Allow")
+$rule2 = New-Object System.Security.AccessControl.FileSystemAccessRule($adminsSid, "FullControl", "Allow")
+
+$acl.AddAccessRule($rule1)
+$acl.AddAccessRule($rule2)
+
+Set-Acl -Path $authKeysFile -AclObject $acl
+
 Write-Host ""
 Write-Host "Done."
-Write-Host "Test locally with:"
+Write-Host "Test SSH login from tela with:"
+Write-Host "  ssh -i <private_key_path> Administrator@<windows_machine_ip>"
+Write-Host ""
+Write-Host "Or test locally with:"
 Write-Host "  ssh localhost"
 Write-Host ""
 Write-Host "PowerShell 7 path:"
